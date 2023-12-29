@@ -2,9 +2,9 @@
 
 Web crawler and scraper based on Scrapy and Playwright's headless browser.
 
-To use the headless browser specify `-p yes` flag. Browsers, unlike other standard web request libraries, have the ability to render JavaScript encoded HTML content.
+To use the headless browser specify `-p` option. Browsers, unlike other standard web request libraries, have the ability to render JavaScript encoded HTML content.
 
-To automatically download and beautify all JavaScript files, including minified ones, specify `-d downloads` flag - where `downloads` is your desired output directory.
+To automatically download and beautify all JavaScript files, including minified ones, specify `-dir downloads` option - where `downloads` is your desired output directory.
 
 Resources:
 
@@ -27,8 +27,6 @@ Made for educational purposes. I hope it will help!
 ## How to Install
 
 ```bash
-pip3 install scrapy-scraper
-
 pip3 install --upgrade scrapy-scraper
 
 playwright install chromium
@@ -45,7 +43,7 @@ python3 -m pip install --upgrade build
 
 python3 -m build
 
-python3 -m pip install dist/scrapy-scraper-1.3-py3-none-any.whl
+python3 -m pip install dist/scrapy-scraper-1.4-py3-none-any.whl
 
 playwright install chromium
 ```
@@ -55,71 +53,71 @@ playwright install chromium
 Restricted (auto throttling and domain whitelisting is on):
 
 ```fundamental
-scrapy-scraper -u https://example.com/home -o results.txt -a random -d js -l yes
+scrapy-scraper -u https://example.com/home -o results.txt -a random -dir js -l
 ```
 
 Unrestricted (auto throttling and domain whitelisting is off):
 
 ```fundamental
-scrapy-scraper -u https://example.com/home -o results.txt -a random -d js -at off -w off -l yes
+scrapy-scraper -u https://example.com/home -o results.txt -a random -dir js -at off -w off -l
 ```
 
 ## Usage
 
 ```fundamental
-Scrapy Scraper v1.3 ( github.com/ivan-sincek/scrapy-scraper )
+Scrapy Scraper v1.4 ( github.com/ivan-sincek/scrapy-scraper )
 
-Usage:   scrapy-scraper -u urls                     -o out         [-d directory]
-Example: scrapy-scraper -u https://example.com/home -o results.txt [-d downloads]
+Usage:   scrapy-scraper -u urls                     -o out         [-dir directory]
+Example: scrapy-scraper -u https://example.com/home -o results.txt [-dir downloads]
 
 DESCRIPTION
     Crawl and scrape websites
 URLS
     File with URLs or a single URL to start crawling and scraping from
-    -u <urls> - urls.txt | https://example.com/home | etc.
+    -u, --urls = urls.txt | https://example.com/home | etc.
 WHITELIST
     File with whitelisted domains to limit the crawling scope
     Specify 'off' to disable domain whitelisting
     Default: domains extracted from URLs
-    -w <whitelist> - whitelist.txt | off | etc.
+    -w, --whitelist = whitelist.txt | off | etc.
 LINKS
     Include all [3rd party] links and sources in the output file
-    -l <links> - yes
+    -l, --links
 PLAYWRIGHT
     Use Playwright's headless browser
-    -p <playwright> - yes
+    -p, --playwright
 CONCURRENT REQUESTS
     Number of concurrent requests
     Default: 30
-    -cr <concurrent-requests> - 15 | 45 | etc.
+    -cr, --concurrent-requests = 15 | 45 | etc.
 CONCURRENT REQUESTS PER DOMAIN
     Number of concurrent requests per domain
     Default: 10
-    -crd <concurrent-requests-domain> - 5 | 15 | etc.
+    -crd, --concurrent-requests-domain = 5 | 15 | etc.
 AUTO THROTTLE
     Auto throttle crawling speed
     Specify value lesser than 1 to decrease the speed
     Specify value greater than 1 to increase the speed
     Specify 'off' to disable auto throttling
     Default: 1
-    -at <auto-throttle> - 0.5 | 1.5 | off | etc.
+    -at, --auto-throttle = 0.5 | 1.5 | off | etc.
 RECURSION
     Recursion depth limit
     Specify '0' for no limit
     Default: 1
-    -r <recursion> - 0 | 2 | 4 | etc.
-AGENT
+    -r, --recursion = 0 | 2 | 4 | etc.
+USER AGENT
     User agent to use
-    Default: Scrapy Scraper/1.3
-    -a <agent> - curl/3.30.1 | random | etc.
+    Default: Scrapy Scraper/1.4
+    -a, --user-agent = curl/3.30.1 | random | etc.
 PROXY
     Web proxy to use
-    -x <proxy> - http://127.0.0.1:8080 | etc.
+    -x, --proxy = http://127.0.0.1:8080 | etc.
 DIRECTORY
     Output directory
     All extracted JavaScript files will be saved in this directory
-    -d <directory> - downloads | etc.
+    -dir, --directory = downloads | etc.
 OUT
     Output file
-    -o <out> - results.txt | etc.
+    -o, --out = results.txt | etc.
 ```

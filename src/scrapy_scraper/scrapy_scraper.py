@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
 
-import datetime, sys, os, shutil, random, urllib.parse, tldextract, scrapy, scrapy.utils.project, scrapy.crawler, bs4, jsbeautifier, colorama, termcolor
-
-start = datetime.datetime.now()
+import argparse, bs4, colorama, datetime, jsbeautifier, os, random, scrapy, scrapy.crawler, scrapy.utils.project, sys, termcolor, tldextract, urllib.parse
 
 colorama.init(autoreset = True)
+
+# ----------------------------------------
+
+class Stopwatch:
+
+	def __init__(self):
+		self.__start = datetime.datetime.now()
+
+	def stop(self):
+		self.__end = datetime.datetime.now()
+		print(("Script has finished in {0}").format(self.__end - self.__start))
+
+stopwatch = Stopwatch()
 
 # ----------------------------------------
 
@@ -21,7 +32,6 @@ def read_file(file):
 			line = line.strip()
 			if line:
 				tmp.append(line)
-	stream.close()
 	return unique(tmp)
 
 def write_array(data, out):
@@ -39,9 +49,9 @@ def write_array(data, out):
 		except FileNotFoundError:
 			print(("Cannot save results to '{0}'").format(out))
 
-default_user_agent = "Scrapy Scraper/1.3"
+default_user_agent = "Scrapy Scraper/1.4"
 
-def get_random_user_agent():
+def get_all_user_agents():
 	array = []
 	file = os.path.join(os.path.abspath(os.path.split(__file__)[0]), "user_agents.txt")
 	if os.path.isfile(file) and os.access(file, os.R_OK) and os.stat(file).st_size > 0:
@@ -50,30 +60,23 @@ def get_random_user_agent():
 				line = line.strip()
 				if line:
 					array.append(line)
-		stream.close()
-	return array[random.randint(0, len(array) - 1)] if array else default_user_agent
+	return array if array else [default_agent]
+
+def get_random_user_agent():
+	array = get_all_user_agents()
+	return array[random.randint(0, len(array) - 1)]
 
 # ----------------------------------------
 
 class ScrapyScraperSpider(scrapy.Spider):
 
-	def __init__(
-		self,
-		urls,
-		whitelist,
-		links,
-		playwright,
-		agent,
-		proxy,
-		directory,
-		out
-	):
+	def __init__(self, urls, whitelist, links, playwright, user_agent, proxy, directory, out):
 		self.name                  = "ScrapyScraperSpider"
 		self.start_urls            = urls
 		self.allowed_domains       = whitelist
 		self.__links               = links
 		self.__playwright          = playwright
-		self.__agent               = agent
+		self.__user_agent          = user_agent
 		self.__proxy               = proxy
 		self.__directory           = directory
 		self.__out                 = out
@@ -135,7 +138,7 @@ class ScrapyScraperSpider(scrapy.Spider):
 			"Connection"               : "keep-alive",
 			"Referer"                  : "https://www.google.com/",
 			"Upgrade-Insecure-Requests": "1",
-			"User-Agent"               : self.__agent
+			"User-Agent"               : self.__user_agent
 		}
 
 	def __get_meta(self):
@@ -153,17 +156,14 @@ class ScrapyScraperSpider(scrapy.Spider):
 				"java_script_enabled": self.__javascript_enabled,
 				"accept_downloads"   : self.__accept_downloads,
 				"bypass_csp"         : self.__bypass_csp,
-				"ignore_https_errors": self.__ignore_https_errors
+				"ignore_https_errors": self.__ignore_https_errors,
+				"proxy"              : {"server": self.__proxy} if self.__proxy else None
 			},
 			"playwright_include_page"    : True,
 			"playwright_page_goto_kwargs": {
 				"wait_until": "load"
 			}
 		}
-		if self.__proxy:
-			tmp["playwright_context_kwargs"]["proxy"] = {
-				"server": self.__proxy
-			}
 		return tmp
 
 	async def __exception(self, failure):
@@ -179,7 +179,8 @@ class ScrapyScraperSpider(scrapy.Spider):
 			await page.context.close()
 		self.__crawled.append(response.url)
 		self.__collected.append(response.url)
-		self.__download_js(response)
+		if self.__directory:
+			self.__download_js(response)
 		print(response.url)
 		links = self.__extract_links(response)
 		if self.__links:
@@ -195,16 +196,15 @@ class ScrapyScraperSpider(scrapy.Spider):
 			)
 
 	def __download_js(self, response):
-		if self.__directory:
-			file = urllib.parse.urlparse(response.url).path.rsplit("/", 1)[-1]
-			if file.lower().endswith(".js"):
-				file = os.path.join(self.__directory, file)
-				if not os.path.exists(file):
-					try:
-						soup = bs4.BeautifulSoup(response.body, "html.parser")
-						open(file, "w").write(jsbeautifier.beautify(soup.get_text()))
-					except Exception:
-						pass
+		file = urllib.parse.urlparse(response.url).path.rsplit("/", 1)[-1]
+		if file.lower().endswith(".js"):
+			file = os.path.join(self.__directory, file)
+			if not os.path.exists(file):
+				try:
+					soup = bs4.BeautifulSoup(response.body, "html.parser")
+					open(file, "w").write(jsbeautifier.beautify(soup.get_text()))
+				except Exception:
+					pass
 
 	def __extract_links(self, response):
 		tmp = []
@@ -224,21 +224,7 @@ def page_block(request):
 
 class ScrapyScraper:
 
-	def __init__(
-		self,
-		urls,
-		whitelist,
-		links,
-		playwright,
-		concurrent_requests,
-		concurrent_requests_domain,
-		auto_throttle,
-		recursion,
-		agent,
-		proxy,
-		directory,
-		out
-	):
+	def __init__(self, urls, whitelist, links, playwright, concurrent_requests, concurrent_requests_domain, auto_throttle, recursion, user_agent, proxy, directory, out):
 		self.__urls                       = urls
 		self.__whitelist                  = whitelist
 		self.__links                      = links
@@ -247,7 +233,7 @@ class ScrapyScraper:
 		self.__concurrent_requests_domain = concurrent_requests_domain
 		self.__auto_throttle              = auto_throttle
 		self.__recursion                  = recursion
-		self.__agent                      = agent
+		self.__user_agent                 = user_agent
 		self.__proxy                      = proxy
 		self.__directory                  = directory
 		self.__out                        = out
@@ -304,117 +290,135 @@ class ScrapyScraper:
 			settings["PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT"] = self.__timeout * 1000
 		# --------------------------------
 		scrapy_scraper_spider = scrapy.crawler.CrawlerProcess(settings)
-		scrapy_scraper_spider.crawl(ScrapyScraperSpider, self.__urls, self.__whitelist, self.__links, self.__playwright, self.__agent, self.__proxy, self.__directory, self.__out)
+		scrapy_scraper_spider.crawl(ScrapyScraperSpider, self.__urls, self.__whitelist, self.__links, self.__playwright, self.__user_agent, self.__proxy, self.__directory, self.__out)
 		scrapy_scraper_spider.start()
 
 # ----------------------------------------
 
-# my own validation algorithm
-
-class Validate:
-
-	def __init__(self):
-		self.__proceed = True
-		self.__args    = {
-			"urls"                      : None,
-			"whitelist"                 : None,
-			"links"                     : None,
-			"playwright"                : None,
-			"concurrent_requests"       : None,
-			"concurrent_requests_domain": None,
-			"auto_throttle"             : None,
-			"recursion"                 : None,
-			"agent"                     : None,
-			"proxy"                     : None,
-			"directory"                 : None,
-			"out"                       : None
-		}
-
-	def __basic(self):
-		self.__proceed = False
-		print("Scrapy Scraper v1.3 ( github.com/ivan-sincek/scrapy-scraper )")
+class MyArgParser(argparse.ArgumentParser):
+	
+	def print_help(self):
+		print("Scrapy Scraper v1.4 ( github.com/ivan-sincek/scrapy-scraper )")
 		print("")
-		print("Usage:   scrapy-scraper -u urls                     -o out         [-d directory]")
-		print("Example: scrapy-scraper -u https://example.com/home -o results.txt [-d downloads]")
-
-	def __advanced(self):
-		self.__basic()
+		print("Usage:   scrapy-scraper -u urls                     -o out         [-dir directory]")
+		print("Example: scrapy-scraper -u https://example.com/home -o results.txt [-dir downloads]")
 		print("")
 		print("DESCRIPTION")
 		print("    Crawl and scrape websites")
 		print("URLS")
 		print("    File with URLs or a single URL to start crawling and scraping from")
-		print("    -u <urls> - urls.txt | https://example.com/home | etc.")
+		print("    -u, --urls = urls.txt | https://example.com/home | etc.")
 		print("WHITELIST")
 		print("    File with whitelisted domains to limit the crawling scope")
 		print("    Specify 'off' to disable domain whitelisting")
-		print("    Default: domains extracted from URLs")
-		print("    -w <whitelist> - whitelist.txt | off | etc.")
+		print("    Default: domains extracted from the URLs")
+		print("    -w, --whitelist = whitelist.txt | off | etc.")
 		print("LINKS")
 		print("    Include all [3rd party] links and sources in the output file")
-		print("    -l <links> - yes")
+		print("    -l, --links")
 		print("PLAYWRIGHT")
 		print("    Use Playwright's headless browser")
-		print("    -p <playwright> - yes")
+		print("    -p, --playwright")
 		print("CONCURRENT REQUESTS")
 		print("    Number of concurrent requests")
 		print("    Default: 30")
-		print("    -cr <concurrent-requests> - 15 | 45 | etc.")
+		print("    -cr, --concurrent-requests = 15 | 45 | etc.")
 		print("CONCURRENT REQUESTS PER DOMAIN")
 		print("    Number of concurrent requests per domain")
 		print("    Default: 10")
-		print("    -crd <concurrent-requests-domain> - 5 | 15 | etc.")
+		print("    -crd, --concurrent-requests-domain = 5 | 15 | etc.")
 		print("AUTO THROTTLE")
 		print("    Auto throttle crawling speed")
 		print("    Specify value lesser than 1 to decrease the speed")
 		print("    Specify value greater than 1 to increase the speed")
 		print("    Specify 'off' to disable auto throttling")
 		print("    Default: 1")
-		print("    -at <auto-throttle> - 0.5 | 1.5 | off | etc.")
+		print("    -at, --auto-throttle = 0.5 | 1.5 | off | etc.")
 		print("RECURSION")
 		print("    Recursion depth limit")
 		print("    Specify '0' for no limit")
 		print("    Default: 1")
-		print("    -r <recursion> - 0 | 2 | 4 | etc.")
-		print("AGENT")
+		print("    -r, --recursion = 0 | 2 | 4 | etc.")
+		print("USER AGENT")
 		print("    User agent to use")
 		print(("    Default: {0}").format(default_user_agent))
-		print("    -a <agent> - curl/3.30.1 | random | etc.")
+		print("    -a, --user-agent = curl/3.30.1 | random | etc.")
 		print("PROXY")
 		print("    Web proxy to use")
-		print("    -x <proxy> - http://127.0.0.1:8080 | etc.")
+		print("    -x, --proxy = http://127.0.0.1:8080 | etc.")
 		print("DIRECTORY")
 		print("    Output directory")
 		print("    All extracted JavaScript files will be saved in this directory")
-		print("    -d <directory> - downloads | etc.")
+		print("    -dir, --directory = downloads | etc.")
 		print("OUT")
 		print("    Output file")
-		print("    -o <out> - results.txt | etc.")
+		print("    -o, --out = results.txt | etc.")
+
+	def error(self, message):
+		if len(sys.argv) > 1:
+			print("Missing a mandatory option (-u, -o) and/or optional (-w, -p, -cr, -crd, -at, -r, -a, -x, -dir)")
+			print("Use -h or --help for more info")
+		else:
+			self.print_help()
+		exit()
+
+class Validate:
+
+	def __init__(self):
+		self.__proceed = True
+		self.__parser  = MyArgParser()
+		self.__parser.add_argument("-u"  , "--urls"                      , required = True , type   = str         , default = ""   )
+		self.__parser.add_argument("-w"  , "--whitelist"                 , required = False, type   = str         , default = ""   )
+		self.__parser.add_argument("-l"  , "--links"                     , required = False, action = "store_true", default = False)
+		self.__parser.add_argument("-p"  , "--playwright"                , required = False, action = "store_true", default = False)
+		self.__parser.add_argument("-cr" , "--concurrent-requests"       , required = False, type   = str         , default = ""   )
+		self.__parser.add_argument("-crd", "--concurrent-requests-domain", required = False, type   = str         , default = ""   )
+		self.__parser.add_argument("-at" , "--auto-throttle"             , required = False, type   = str         , default = ""   )
+		self.__parser.add_argument("-r"  , "--recursion"                 , required = False, type   = str         , default = ""   )
+		self.__parser.add_argument("-a"  , "--user-agent"                , required = False, type   = str         , default = ""   )
+		self.__parser.add_argument("-x"  , "--proxy"                     , required = False, type   = str         , default = ""   )
+		self.__parser.add_argument("-dir", "--directory"                 , required = False, type   = str         , default = ""   )
+		self.__parser.add_argument("-o"  , "--out"                       , required = True , type   = str         , default = ""   )
+
+	def run(self):
+		self.__args                            = self.__parser.parse_args()
+		self.__args.urls                       = self.__parse_urls(self.__args.urls)                                             # required
+		self.__args.whitelist                  = self.__parse_whitelist(self.__args.whitelist)                                   if self.__args.whitelist                  else (self.__validate_domains(self.__args.urls) if self.__proceed else [])
+		self.__args.concurrent_requests        = self.__parse_concurrent_requests(self.__args.concurrent_requests)               if self.__args.concurrent_requests        else 30
+		self.__args.concurrent_requests_domain = self.__parse_concurrent_requests_domain(self.__args.concurrent_requests_domain) if self.__args.concurrent_requests_domain else 10
+		self.__args.auto_throttle              = self.__parse_auto_throttle(self.__args.auto_throttle)                           if self.__args.auto_throttle              else 1
+		self.__args.recursion                  = self.__parse_recursion(self.__args.recursion)                                   if self.__args.recursion                  else 1
+		self.__args.user_agent                 = self.__parse_user_agent(self.__args.user_agent)                                 if self.__args.user_agent                 else default_user_agent
+		self.__args.proxy                      = self.__parse_proxy(self.__args.proxy)                                           if self.__args.proxy                      else ""
+		self.__args.directory                  = self.__parse_directory(self.__args.directory)                                   if self.__args.directory                  else ""
+		self.__args                            = vars(self.__args)
+		return self.__proceed
+
+	def get_arg(self, key):
+		return self.__args[key]
+
+	def __error(self, msg):
+		self.__proceed = False
+		self.__print_error(msg)
 
 	def __print_error(self, msg):
 		print(("ERROR: {0}").format(msg))
 
-	def __error(self, msg, help = False):
-		self.__proceed = False
-		self.__print_error(msg)
-		if help:
-			print("Use -h for basic and --help for advanced info")
-
-	def __validate_urls(self, urls):
-		if not isinstance(urls, list):
-			urls = [urls]
+	def __validate_urls(self, values):
+		if not isinstance(values, list):
+			values = [values]
 		tmp = []
-		for url in urls:
+		for value in values:
 			data = {
 				"schemes": ["http", "https"],
 				"scheme_error": [
-					("URL scheme is required: {0}").format(url),
-					("Supported URL schemes are 'http' and 'https': {0}").format(url)
+					("URL scheme is required: {0}").format(value),
+					("Supported URL schemes are 'http' and 'https': {0}").format(value)
 				],
-				"domain_error": ("Invalid domain name: {0}").format(url),
-				"port_error": ("Port number is out of range: {0}").format(url)
+				"domain_error": ("Invalid domain name: {0}").format(value),
+				"port_error": ("Port number is out of range: {0}").format(value)
 			}
-			obj = urllib.parse.urlsplit(url)
+			obj = urllib.parse.urlsplit(value)
 			if not obj.scheme:
 				self.__error(data["scheme_error"][0])
 			elif obj.scheme not in data["schemes"]:
@@ -424,16 +428,33 @@ class Validate:
 			elif obj.port and (obj.port < 1 or obj.port > 65535):
 				self.__error(data["port_error"])
 			else:
-				tmp.append(obj.geturl()) # normalized
+				tmp.append(obj.geturl()) # normalize
 		return unique(tmp)
 
-	def __validate_domains(self, urls):
-		if not isinstance(urls, list):
-			urls = [urls]
+	def __parse_urls(self, value):
+		tmp = []
+		if os.path.isfile(value):
+			if not os.access(value, os.R_OK):
+				self.__error("File with URLs does not have a read permission")
+			elif not os.stat(value).st_size > 0:
+				self.__error("File with URLs is empty")
+			else:
+				tmp = read_file(value)
+				if not tmp:
+					self.__error("No URLs were found")
+				else:
+					tmp = self.__validate_urls(tmp)
+		else:
+			tmp = self.__validate_urls(value)
+		return tmp
+
+	def __validate_domains(self, values):
+		if not isinstance(values, list):
+			values = [values]
 		tmp = []
 		const = "."
-		for url in urls:
-			obj = tldextract.extract(url)
+		for value in values:
+			obj = tldextract.extract(value)
 			if obj.domain and obj.suffix:
 				domain = obj.domain + const + obj.suffix
 				if obj.subdomain:
@@ -441,194 +462,89 @@ class Validate:
 				tmp.append(domain.lower())
 		return unique(tmp)
 
-	def __parse_float(self, string):
+	def __parse_whitelist(self, value):
+		tmp = []
+		if value.lower() == "off":
+			pass
+		elif not os.path.isfile(value):
+			self.__error("File with whitelisted domains does not exists")
+		elif not os.access(value, os.R_OK):
+			self.__error("File with whitelisted domains does not have a read permission")
+		elif not os.stat(value).st_size > 0:
+			self.__error("File with whitelisted domains is empty")
+		else:
+			tmp = self.__validate_domains(read_file(value))
+			if not tmp:
+				self.__error("No valid whitelisted domains were found")
+		return tmp
+
+	def __parse_greater_than(self, value, minimum, maximum, error_numeric, error_scope):
+		if not value.isdigit():
+			self.__error(error_numeric)
+		else:
+			value = int(value)
+			if (minimum and value < minimum) or (maximum and value > maximum):
+				self.__error(error_scope)
+		return value
+
+	def __parse_concurrent_requests(self, value):
+		return self.__parse_greater_than(value, 1, None,
+			"Number of concurrent requests must be numeric",
+			"Number of concurrent requests must be greater than zero"
+		)
+
+	def __parse_concurrent_requests_domain(self, value):
+		return self.__parse_greater_than(value, 1, None,
+			"Number of concurrent requests per domain must be numeric",
+			"Number of concurrent requests per domain must be greater than zero"
+		)
+
+	def __parse_float(self, value):
 		tmp = None
 		try:
-			tmp = float(string)
+			tmp = float(value)
 		except ValueError:
 			pass
 		return tmp
 
-	def __remove_directory(self, directory):
-		success = True
-		try:
-			if os.path.exists(directory):
-				shutil.rmtree(directory)
-		except Exception:
-			success = False
-			self.__error(("Cannot remove '{0}' related directories/subdirectories and/or files").format(directory))
-		return success
-
-	def __create_directory(self, directory):
-		success = True
-		try:
-			if not os.path.exists(directory):
-				os.mkdir(directory)
-		except Exception:
-			success = False
-			self.__error(("Cannot create '{0}' directory").format(directory))
-		return success
-
-	def __check_directory(self, directory):
-		success = False
-		overwrite = "yes"
-		if os.path.exists(directory):
-			print(("'{0}' directory already exists").format(directory))
-			overwrite = input("Overwrite the output directory (yes): ")
-		if overwrite.lower() == "yes" and self.__remove_directory(directory):
-			success = self.__create_directory(directory)
+	def __parse_auto_throttle(self, value):
+		if value.lower() == "off":
+			value = 0
 		else:
-			self.__proceed = False
-		return success
+			value = self.__parse_float(value)
+			if value is None:
+				self.__error("Auto throttle must be numeric")
+			elif value < 0:
+				self.__error("Auto throttle must be greater than zero")
+		return value
 
-	def __validate(self, key, value):
-		value = value.strip()
-		if len(value) > 0:
-			# --------------------
-			if key == "-u" and self.__args["urls"] is None:
-				self.__args["urls"] = value
-				if os.path.isfile(self.__args["urls"]):
-					if not os.access(self.__args["urls"], os.R_OK):
-						self.__error("File with URLs does not have read permission")
-					elif not os.stat(self.__args["urls"]).st_size > 0:
-						self.__error("File with URLs is empty")
-					else:
-						self.__args["urls"] = self.__validate_urls(read_file(self.__args["urls"]))
-				else:
-					self.__args["urls"] = self.__validate_urls(self.__args["urls"])
-			# --------------------
-			elif key == "-w" and self.__args["whitelist"] is None:
-				self.__args["whitelist"] = value
-				if self.__args["whitelist"].lower() == "off":
-					self.__args["whitelist"] = []
-				elif not os.path.isfile(self.__args["whitelist"]):
-					self.__error("File with whitelisted domains does not exists")
-				elif not os.access(self.__args["whitelist"], os.R_OK):
-					self.__error("File with whitelisted domains does not have read permission")
-				elif not os.stat(self.__args["whitelist"]).st_size > 0:
-					self.__error("File with whitelisted domains is empty")
-				else:
-					self.__args["whitelist"] = self.__validate_domains(read_file(self.__args["whitelist"]))
-					if not self.__args["whitelist"]:
-						self.__error("No valid whitelisted domains were found") # fail-safe
-			# --------------------
-			elif key == "-l" and self.__args["links"] is None:
-				self.__args["links"] = value.lower()
-				if self.__args["links"] != "yes":
-					self.__error("Specify 'yes' to include all links and sources in the output file")
-			# --------------------
-			elif key == "-p" and self.__args["playwright"] is None:
-				self.__args["playwright"] = value.lower()
-				if self.__args["playwright"] != "yes":
-					self.__error("Specify 'yes' to use Playwright's headless browser")
-			# --------------------
-			elif key == "-cr" and self.__args["concurrent_requests"] is None:
-				self.__args["concurrent_requests"] = value
-				if not self.__args["concurrent_requests"].isdigit():
-					self.__error("Number of concurrent requests must be numeric")
-				else:
-					self.__args["concurrent_requests"] = int(self.__args["concurrent_requests"])
-					if self.__args["concurrent_requests"] < 1:
-						self.__error("Number of concurrent requests must be greater than zero")
-			# --------------------
-			elif key == "-crd" and self.__args["concurrent_requests_domain"] is None:
-				self.__args["concurrent_requests_domain"] = value
-				if not self.__args["concurrent_requests_domain"].isdigit():
-					self.__error("Number of concurrent requests per domain must be numeric")
-				else:
-					self.__args["concurrent_requests_domain"] = int(self.__args["concurrent_requests_domain"])
-					if self.__args["concurrent_requests_domain"] < 1:
-						self.__error("Number of concurrent requests per domain must be greater than zero")
-			# --------------------
-			elif key == "-at" and self.__args["auto_throttle"] is None:
-				self.__args["auto_throttle"] = value.lower()
-				if self.__args["auto_throttle"] == "off":
-					self.__args["auto_throttle"] = 0
-				else:
-					self.__args["auto_throttle"] = self.__parse_float(self.__args["auto_throttle"])
-					if not isinstance(self.__args["auto_throttle"], float):
-						self.__error("Auto throttle must be numeric")
-					elif self.__args["auto_throttle"] < 0:
-						self.__error("Auto throttle must be greater than zero")
-			# --------------------
-			elif key == "-r" and self.__args["recursion"] is None:
-				self.__args["recursion"] = value
-				if not self.__args["recursion"].isdigit():
-					self.__error("Recursion depth limit must be numeric")
-				else:
-					self.__args["recursion"] = int(self.__args["recursion"])
-					if self.__args["recursion"] < 0:
-						self.__error("Recursion depth limit must be equal to or greater than zero")
-			# --------------------
-			elif key == "-a" and self.__args["agent"] is None:
-				self.__args["agent"] = value
-				if self.__args["agent"].lower() == "random":
-					self.__args["agent"] = get_random_user_agent()
-			# --------------------
-			elif key == "-x" and self.__args["proxy"] is None:
-				self.__args["proxy"] = self.__validate_urls(value)
-				if self.__args["proxy"]:
-					self.__args["proxy"] = self.__args["proxy"][0]
-			# --------------------
-			elif key == "-d" and self.__args["directory"] is None:
-				self.__args["directory"] = value
-			# --------------------
-			elif key == "-o" and self.__args["out"] is None:
-				self.__args["out"] = value
-			# --------------------
+	def __parse_recursion(self, value):
+		return self.__parse_greater_than(value, 0, None,
+			"Recursion depth limit must be numeric",
+			"Recursion depth limit must be equal to or greater than zero"
+		)
 
-	def __check(self, argc):
-		count = 0
-		for key in self.__args:
-			if self.__args[key] is not None:
-				count += 1
-		return argc - count == argc / 2
+	def __parse_user_agent(self, value):
+		if value.lower() == "random":
+			value = get_random_user_agent()
+		return value
 
-	def run(self):
-		# --------------------
-		argc = len(sys.argv) - 1
-		# --------------------
-		if argc == 0:
-			self.__advanced()
-		# --------------------
-		elif argc == 1:
-			if sys.argv[1] == "-h":
-				self.__basic()
-			elif sys.argv[1] == "--help":
-				self.__advanced()
-			else:
-				self.__error("Incorrect usage", True)
-		# --------------------
-		elif argc % 2 == 0 and argc <= len(self.__args) * 2:
-			for i in range(1, argc, 2):
-				self.__validate(sys.argv[i], sys.argv[i + 1])
-			if None in [self.__args["urls"], self.__args["out"]] or not self.__check(argc):
-				self.__error("Missing a mandatory option (-u, -o) and/or optional (-w, -l, -p, -cr, -crd, -at, -r, -a, -x, -d)", True)
-		# --------------------
-		else:
-			self.__error("Incorrect usage", True)
-		# --------------------
-		if self.__proceed:
-			if self.__args["whitelist"] is None:
-				self.__args["whitelist"] = self.__validate_domains(self.__args["urls"])
-			if self.__args["concurrent_requests"] is None:
-				self.__args["concurrent_requests"] = 30
-			if self.__args["concurrent_requests_domain"] is None:
-				self.__args["concurrent_requests_domain"] = 10
-			if self.__args["auto_throttle"] is None:
-				self.__args["auto_throttle"] = 1
-			if self.__args["recursion"] is None:
-				self.__args["recursion"] = 1
-			if self.__args["agent"] is None:
-				self.__args["agent"] = default_user_agent
-			if self.__args["directory"] is not None:
-				self.__check_directory(self.__args["directory"])
-		# --------------------
-		return self.__proceed
-		# --------------------
+	def __parse_proxy(self, value):
+		tmp = urllib.parse.urlsplit(value)
+		if not tmp.scheme:
+			self.__error("Proxy URL: Scheme is required")
+		elif tmp.scheme not in ["http", "https", "socks4", "socks4h", "socks5", "socks5h"]:
+			self.__error("Proxy URL: Supported schemes are 'http[s]', 'socks4[h]', and 'socks5[h]'")
+		elif not tmp.netloc:
+			self.__error("Proxy URL: Invalid domain name")
+		elif tmp.port and (tmp.port < 1 or tmp.port > 65535):
+			self.__error("Proxy URL: Port number is out of range")
+		return value
 
-	def get_arg(self, key):
-		return self.__args[key]
+	def __parse_directory(self, value):
+		if not os.path.isdir(value):
+			self.__error("Output directory does not exists or is not a directory")
+		return value
 
 # ----------------------------------------
 
@@ -637,7 +553,7 @@ def main():
 	if validate.run():
 		print("###########################################################################")
 		print("#                                                                         #")
-		print("#                           Scrapy Scraper v1.3                           #")
+		print("#                           Scrapy Scraper v1.4                           #")
 		print("#                                     by Ivan Sincek                      #")
 		print("#                                                                         #")
 		print("# Crawl and scrape websites.                                              #")
@@ -654,13 +570,13 @@ def main():
 			validate.get_arg("concurrent_requests_domain"),
 			validate.get_arg("auto_throttle"),
 			validate.get_arg("recursion"),
-			validate.get_arg("agent"),
+			validate.get_arg("user_agent"),
 			validate.get_arg("proxy"),
 			validate.get_arg("directory"),
 			validate.get_arg("out")
 		)
 		scrapy_scraper.run()
-		print(("Script has finished in {0}").format(datetime.datetime.now() - start))
+		stopwatch.stop()
 
 if __name__ == "__main__":
 	main()
