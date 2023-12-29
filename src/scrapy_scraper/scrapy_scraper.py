@@ -44,7 +44,6 @@ def write_array(data, out):
 			with open(out, "w") as stream:
 				for line in data:
 					stream.write(str(line).strip() + "\n")
-			stream.close()
 			print(("Results have been saved to '{0}'").format(out))
 		except FileNotFoundError:
 			print(("Cannot save results to '{0}'").format(out))
