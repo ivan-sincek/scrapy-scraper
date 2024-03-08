@@ -1,0 +1,2 @@
+include src/scrapy_scraper/*.py
+include src/scrapy_scraper/*.txt
