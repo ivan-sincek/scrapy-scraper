@@ -13,7 +13,7 @@ Resources:
 * [scrapy/scrapy](https://github.com/scrapy/scrapy) (GitHub)
 * [scrapy-plugins/scrapy-playwright](https://github.com/scrapy-plugins/scrapy-playwright) (GitHub)
 
-Tested on Kali Linux v2023.3 (64-bit).
+Tested on Kali Linux v2023.4 (64-bit).
 
 Made for educational purposes. I hope it will help!
 
@@ -53,27 +53,27 @@ python3 -m pip install --upgrade build
 
 python3 -m build
 
-python3 -m pip install dist/scrapy-scraper-1.5-py3-none-any.whl
+python3 -m pip install dist/scrapy-scraper-1.6-py3-none-any.whl
 ```
 
 ## How to Run
 
-Restricted (auto throttling and domain whitelisting is on):
+Restricted (domain whitelisting is on):
 
 ```fundamental
-scrapy-scraper -u https://example.com/home -o results.txt -a random -dir js -l
+scrapy-scraper -u https://example.com/home -o results.txt -a random -s random -dir js -l
 ```
 
-Unrestricted (auto throttling and domain whitelisting is off):
+Unrestricted (domain whitelisting is off):
 
 ```fundamental
-scrapy-scraper -u https://example.com/home -o results.txt -a random -dir js -at off -w off -l
+scrapy-scraper -u https://example.com/home -o results.txt -a random -s random -dir js -l -w off
 ```
 
 ## Usage
 
 ```fundamental
-Scrapy Scraper v1.5 ( github.com/ivan-sincek/scrapy-scraper )
+Scrapy Scraper v1.6 ( github.com/ivan-sincek/scrapy-scraper )
 
 Usage:   scrapy-scraper -u urls                     -o out         [-dir directory]
 Example: scrapy-scraper -u https://example.com/home -o results.txt [-dir downloads]
@@ -86,10 +86,10 @@ URLS
 WHITELIST
     File with whitelisted domains to limit the crawling scope
     Specify 'off' to disable domain whitelisting
-    Default: domains extracted from URLs
+    Default: domains extracted from initial URLs
     -w, --whitelist = whitelist.txt | off | etc.
 LINKS
-    Include all [3rd party] links and sources in the output file
+    Include all links and sources (incl. 3rd party) in the output file
     -l, --links
 PLAYWRIGHT
     Use Playwright's headless browser
@@ -102,13 +102,14 @@ CONCURRENT REQUESTS PER DOMAIN
     Number of concurrent requests per domain
     Default: 10
     -crd, --concurrent-requests-domain = 5 | 15 | etc.
+SLEEP
+    Sleep time between two consecutive requests to the same domain
+    Specify 'random' to sleep a random amount of time between 0.5 and 1.5 seconds
+    Default: 1.5
+    -s, --sleep = 0 | 2 | 4 | random | etc.
 AUTO THROTTLE
-    Auto throttle crawling speed
-    Specify value lesser than 1 to decrease the speed
-    Specify value greater than 1 to increase the speed
-    Specify 'off' to disable auto throttling
-    Default: 1
-    -at, --auto-throttle = 0.5 | 1.5 | off | etc.
+    Auto throttle concurrent requests based on the load and latency
+    -at, --auto-throttle = 0.5 | 10 | 15 | 45 | etc.
 RECURSION
     Recursion depth limit
     Specify '0' for no limit
@@ -116,7 +117,7 @@ RECURSION
     -r, --recursion = 0 | 2 | 4 | etc.
 USER AGENT
     User agent to use
-    Default: Scrapy Scraper/1.5
+    Default: Scrapy Scraper/1.6
     -a, --user-agent = curl/3.30.1 | random | etc.
 PROXY
     Web proxy to use

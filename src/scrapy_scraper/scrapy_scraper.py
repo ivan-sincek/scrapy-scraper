@@ -70,7 +70,7 @@ def write_array(data, out):
 		except FileNotFoundError:
 			print(("Cannot save results to '{0}'").format(out))
 
-default_user_agent = "Scrapy Scraper/1.5"
+default_user_agent = "Scrapy Scraper/1.6"
 
 def get_all_user_agents():
 	array = []
@@ -240,18 +240,16 @@ class ScrapyScraperSpider(scrapy.Spider):
 
 # ----------------------------------------
 
-def page_block(request):
-	return request.resource_type in ["fetch", "stylesheet", "image", "ping", "font", "media", "imageset", "beacon", "csp_report", "object", "texttrack", "manifest"]
-
 class ScrapyScraper:
 
-	def __init__(self, urls, whitelist, links, playwright, concurrent_requests, concurrent_requests_domain, auto_throttle, recursion, user_agent, proxy, directory, out):
+	def __init__(self, urls, whitelist, links, playwright, concurrent_requests, concurrent_requests_domain, sleep, auto_throttle, recursion, user_agent, proxy, directory, out):
 		self.__urls                       = urls
 		self.__whitelist                  = whitelist
 		self.__links                      = links
 		self.__playwright                 = playwright
 		self.__concurrent_requests        = concurrent_requests
 		self.__concurrent_requests_domain = concurrent_requests_domain
+		self.__sleep                      = sleep
 		self.__auto_throttle              = auto_throttle
 		self.__recursion                  = recursion
 		self.__user_agent                 = user_agent
@@ -274,16 +272,19 @@ class ScrapyScraper:
 		# --------------------------------
 		settings["COOKIES_ENABLED"] = True
 		settings["DOWNLOAD_TIMEOUT"] = self.__timeout # connect / read timeout
-		settings["RANDOMIZE_DOWNLOAD_DELAY"] = True
+		if self.__sleep >= 0:
+			settings["DOWNLOAD_DELAY"] = self.__sleep
+		else:
+			settings["RANDOMIZE_DOWNLOAD_DELAY"] = True
 		if self.__proxy:
 			settings["HTTPPROXY_ENABLED"] = True
 		# --------------------------------
-		if self.__auto_throttle:
+		if self.__auto_throttle > 0:
 			settings["EXTENSIONS"]["scrapy.extensions.throttle.AutoThrottle"] = 100
 			settings["AUTOTHROTTLE_ENABLED"] = True
 			settings["AUTOTHROTTLE_DEBUG"] = False
-			settings["AUTOTHROTTLE_START_DELAY"] = 5
-			settings["AUTOTHROTTLE_MAX_DELAY"] = 30
+			settings["AUTOTHROTTLE_START_DELAY"] = self.__sleep if self.__sleep >= 0 else 1.5
+			settings["AUTOTHROTTLE_MAX_DELAY"] = settings["AUTOTHROTTLE_START_DELAY"] + 30
 			settings["AUTOTHROTTLE_TARGET_CONCURRENCY"] = self.__auto_throttle
 		# --------------------------------
 		settings["CONCURRENT_REQUESTS"] = self.__concurrent_requests
@@ -307,19 +308,22 @@ class ScrapyScraper:
 				"headless": self.__headless_browser
 			}
 			settings["PLAYWRIGHT_BROWSER_TYPE"] = self.__browser_type
-			settings["PLAYWRIGHT_ABORT_REQUEST"] = page_block
+			settings["PLAYWRIGHT_ABORT_REQUEST"] = self.__page_block
 			settings["PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT"] = self.__timeout * 1000
 		# --------------------------------
 		scrapy_scraper_spider = scrapy.crawler.CrawlerProcess(settings)
 		scrapy_scraper_spider.crawl(ScrapyScraperSpider, self.__urls, self.__whitelist, self.__links, self.__playwright, self.__user_agent, self.__proxy, self.__directory, self.__out)
 		scrapy_scraper_spider.start()
 
+	def __page_block(self, request):
+		return request.resource_type in ["fetch", "stylesheet", "image", "ping", "font", "media", "imageset", "beacon", "csp_report", "object", "texttrack", "manifest"]
+
 # ----------------------------------------
 
 class MyArgParser(argparse.ArgumentParser):
 	
 	def print_help(self):
-		print("Scrapy Scraper v1.5 ( github.com/ivan-sincek/scrapy-scraper )")
+		print("Scrapy Scraper v1.6 ( github.com/ivan-sincek/scrapy-scraper )")
 		print("")
 		print("Usage:   scrapy-scraper -u urls                     -o out         [-dir directory]")
 		print("Example: scrapy-scraper -u https://example.com/home -o results.txt [-dir downloads]")
@@ -332,10 +336,10 @@ class MyArgParser(argparse.ArgumentParser):
 		print("WHITELIST")
 		print("    File with whitelisted domains to limit the crawling scope")
 		print("    Specify 'off' to disable domain whitelisting")
-		print("    Default: domains extracted from the URLs")
+		print("    Default: domains extracted from initial URLs")
 		print("    -w, --whitelist = whitelist.txt | off | etc.")
 		print("LINKS")
-		print("    Include all [3rd party] links and sources in the output file")
+		print("    Include all links and sources (incl. 3rd party) in the output file")
 		print("    -l, --links")
 		print("PLAYWRIGHT")
 		print("    Use Playwright's headless browser")
@@ -348,13 +352,14 @@ class MyArgParser(argparse.ArgumentParser):
 		print("    Number of concurrent requests per domain")
 		print("    Default: 10")
 		print("    -crd, --concurrent-requests-domain = 5 | 15 | etc.")
+		print("SLEEP")
+		print("    Sleep time between two consecutive requests to the same domain")
+		print("    Specify 'random' to sleep a random amount of time between 0.5 and 1.5 seconds")
+		print("    Default: 1.5")
+		print("    -s, --sleep = 0 | 2 | 4 | random | etc.")
 		print("AUTO THROTTLE")
-		print("    Auto throttle crawling speed")
-		print("    Specify value lesser than 1 to decrease the speed")
-		print("    Specify value greater than 1 to increase the speed")
-		print("    Specify 'off' to disable auto throttling")
-		print("    Default: 1")
-		print("    -at, --auto-throttle = 0.5 | 1.5 | off | etc.")
+		print("    Auto throttle concurrent requests based on the load and latency")
+		print("    -at, --auto-throttle = 0.5 | 10 | 15 | 45 | etc.")
 		print("RECURSION")
 		print("    Recursion depth limit")
 		print("    Specify '0' for no limit")
@@ -377,7 +382,7 @@ class MyArgParser(argparse.ArgumentParser):
 
 	def error(self, message):
 		if len(sys.argv) > 1:
-			print("Missing a mandatory option (-u, -o) and/or optional (-w, -p, -cr, -crd, -at, -r, -a, -x, -dir)")
+			print("Missing a mandatory option (-u, -o) and/or optional (-w, -l, -p, -cr, -crd, -s, -at, -r, -a, -x, -dir)")
 			print("Use -h or --help for more info")
 		else:
 			self.print_help()
@@ -394,6 +399,7 @@ class Validate:
 		self.__parser.add_argument("-p"  , "--playwright"                , required = False, action = "store_true", default = False)
 		self.__parser.add_argument("-cr" , "--concurrent-requests"       , required = False, type   = str         , default = ""   )
 		self.__parser.add_argument("-crd", "--concurrent-requests-domain", required = False, type   = str         , default = ""   )
+		self.__parser.add_argument("-s"  , "--sleep"                     , required = False, type   = str         , default = ""   )
 		self.__parser.add_argument("-at" , "--auto-throttle"             , required = False, type   = str         , default = ""   )
 		self.__parser.add_argument("-r"  , "--recursion"                 , required = False, type   = str         , default = ""   )
 		self.__parser.add_argument("-a"  , "--user-agent"                , required = False, type   = str         , default = ""   )
@@ -404,10 +410,11 @@ class Validate:
 	def run(self):
 		self.__args                            = self.__parser.parse_args()
 		self.__args.urls                       = self.__parse_urls(self.__args.urls)                                             # required
-		self.__args.whitelist                  = self.__parse_whitelist(self.__args.whitelist)                                   if self.__args.whitelist                  else (self.__validate_domains(self.__args.urls) if self.__proceed else [])
+		self.__args.whitelist                  = self.__parse_whitelist(self.__args.whitelist)                                   if self.__args.whitelist                  else (validate_domains(self.__args.urls) if self.__proceed else [])
 		self.__args.concurrent_requests        = self.__parse_concurrent_requests(self.__args.concurrent_requests)               if self.__args.concurrent_requests        else 30
 		self.__args.concurrent_requests_domain = self.__parse_concurrent_requests_domain(self.__args.concurrent_requests_domain) if self.__args.concurrent_requests_domain else 10
-		self.__args.auto_throttle              = self.__parse_auto_throttle(self.__args.auto_throttle)                           if self.__args.auto_throttle              else 1
+		self.__args.sleep                      = self.__parse_sleep(self.__args.sleep)                                           if self.__args.sleep                      else 1.5
+		self.__args.auto_throttle              = self.__parse_auto_throttle(self.__args.auto_throttle)                           if self.__args.auto_throttle              else 0
 		self.__args.recursion                  = self.__parse_recursion(self.__args.recursion)                                   if self.__args.recursion                  else 1
 		self.__args.user_agent                 = self.__parse_user_agent(self.__args.user_agent)                                 if self.__args.user_agent                 else default_user_agent
 		self.__args.proxy                      = self.__parse_proxy(self.__args.proxy)                                           if self.__args.proxy                      else ""
@@ -506,21 +513,32 @@ class Validate:
 			"Number of concurrent requests per domain must be greater than zero"
 		)
 
+	def __parse_sleep(self, value):
+		if value.lower() == "random":
+			value = -1
+		else:
+			value = parse_float(value)
+			if value is None:
+				self.__error("Sleep must be numeric")
+			elif value <= 0:
+				self.__error("Sleep must be greater than or equal to zero")
+		return value
+
 	def __parse_auto_throttle(self, value):
 		if value.lower() == "off":
-			value = 0
+			value = -1
 		else:
 			value = parse_float(value)
 			if value is None:
 				self.__error("Auto throttle must be numeric")
-			elif value < 0:
+			elif value <= 0:
 				self.__error("Auto throttle must be greater than zero")
 		return value
 
 	def __parse_recursion(self, value):
 		return self.__parse_greater_than(value, 0, None,
 			"Recursion depth limit must be numeric",
-			"Recursion depth limit must be equal to or greater than zero"
+			"Recursion depth limit must be greater than or equal to zero"
 		)
 
 	def __parse_user_agent(self, value):
@@ -552,7 +570,7 @@ def main():
 	if validate.run():
 		print("###########################################################################")
 		print("#                                                                         #")
-		print("#                           Scrapy Scraper v1.5                           #")
+		print("#                           Scrapy Scraper v1.6                           #")
 		print("#                                     by Ivan Sincek                      #")
 		print("#                                                                         #")
 		print("# Crawl and scrape websites.                                              #")
@@ -567,6 +585,7 @@ def main():
 			validate.get_arg("playwright"),
 			validate.get_arg("concurrent_requests"),
 			validate.get_arg("concurrent_requests_domain"),
+			validate.get_arg("sleep"),
 			validate.get_arg("auto_throttle"),
 			validate.get_arg("recursion"),
 			validate.get_arg("user_agent"),
