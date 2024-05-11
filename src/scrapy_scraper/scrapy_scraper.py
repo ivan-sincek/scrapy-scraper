@@ -70,7 +70,7 @@ def write_array(data, out):
 		except FileNotFoundError:
 			print(("Cannot save results to '{0}'").format(out))
 
-default_user_agent = "Scrapy Scraper/1.6"
+default_user_agent = "Scrapy Scraper/1.7"
 
 def get_all_user_agents():
 	array = []
@@ -323,7 +323,7 @@ class ScrapyScraper:
 class MyArgParser(argparse.ArgumentParser):
 	
 	def print_help(self):
-		print("Scrapy Scraper v1.6 ( github.com/ivan-sincek/scrapy-scraper )")
+		print("Scrapy Scraper v1.7 ( github.com/ivan-sincek/scrapy-scraper )")
 		print("")
 		print("Usage:   scrapy-scraper -u urls                     -o out         [-dir directory]")
 		print("Example: scrapy-scraper -u https://example.com/home -o results.txt [-dir downloads]")
@@ -570,7 +570,7 @@ def main():
 	if validate.run():
 		print("###########################################################################")
 		print("#                                                                         #")
-		print("#                           Scrapy Scraper v1.6                           #")
+		print("#                           Scrapy Scraper v1.7                           #")
 		print("#                                     by Ivan Sincek                      #")
 		print("#                                                                         #")
 		print("# Crawl and scrape websites.                                              #")

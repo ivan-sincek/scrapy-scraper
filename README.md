@@ -53,7 +53,7 @@ python3 -m pip install --upgrade build
 
 python3 -m build
 
-python3 -m pip install dist/scrapy-scraper-1.6-py3-none-any.whl
+python3 -m pip install dist/scrapy-scraper-1.7-py3-none-any.whl
 ```
 
 ## How to Run
@@ -73,7 +73,7 @@ scrapy-scraper -u https://example.com/home -o results.txt -a random -s random -d
 ## Usage
 
 ```fundamental
-Scrapy Scraper v1.6 ( github.com/ivan-sincek/scrapy-scraper )
+Scrapy Scraper v1.7 ( github.com/ivan-sincek/scrapy-scraper )
 
 Usage:   scrapy-scraper -u urls                     -o out         [-dir directory]
 Example: scrapy-scraper -u https://example.com/home -o results.txt [-dir downloads]
@@ -117,7 +117,7 @@ RECURSION
     -r, --recursion = 0 | 2 | 4 | etc.
 USER AGENT
     User agent to use
-    Default: Scrapy Scraper/1.6
+    Default: Scrapy Scraper/1.7
     -a, --user-agent = curl/3.30.1 | random | etc.
 PROXY
     Web proxy to use
