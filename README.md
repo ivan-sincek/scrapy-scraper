@@ -54,7 +54,7 @@ python3 -m pip install --upgrade build
 
 python3 -m build
 
-python3 -m pip install dist/scrapy-scraper-2.2-py3-none-any.whl
+python3 -m pip install dist/scrapy-scraper-2.3-py3-none-any.whl
 ```
 
 ## How to Run
@@ -74,7 +74,7 @@ scrapy-scraper -u https://example.com/home -o results.txt -a random -s 2 -rs -di
 ## Usage
 
 ```fundamental
-Scrapy Scraper v2.2 ( github.com/ivan-sincek/scrapy-scraper )
+Scrapy Scraper v2.3 ( github.com/ivan-sincek/scrapy-scraper )
 
 Usage:   scrapy-scraper -u urls                     -o out         [-dir directory]
 Example: scrapy-scraper -u https://example.com/home -o results.txt [-dir downloads]
@@ -137,7 +137,7 @@ COOKIE
     -b, --cookie = PHPSESSIONID=3301 | etc.
 USER AGENT
     User agent to use
-    Default: Scrapy Scraper/2.2
+    Default: Scrapy Scraper/2.3
     -a, --user-agent = curl/3.30.1 | random[-all] | etc.
 PROXY
     Web proxy to use
