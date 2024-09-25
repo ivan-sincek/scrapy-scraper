@@ -37,7 +37,7 @@ pip3 install --upgrade playwright
 playwright install chromium
 ```
 
-Make sure each time you upgrade your Playwright dependency to re-install Chromium; otherwise, you might get no results if using the headless browser.
+Make sure each time you upgrade your Playwright dependency to re-install Chromium; otherwise, you might get an error using the headless browser.
 
 ### Standard Install
 
