@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scrapy-scraper"
-version = "2.3"
+version = "2.4"
 authors = [{ name = "Ivan Sincek" }]
 description = "Web crawler and scraper based on Scrapy and Playwright's headless browser."
 readme = "README.md"
@@ -18,7 +18,6 @@ dependencies = [
 	"beautifulsoup4>=4.12.3",
 	"bs4>=0.0.1",
 	"colorama>=0.4.6",
-	"datetime>=5.2",
 	"jsbeautifier>=1.14.11",
 	"playwright>=1.47.0",
 	"scrapy>=2.11.0",

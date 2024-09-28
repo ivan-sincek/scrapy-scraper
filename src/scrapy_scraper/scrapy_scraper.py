@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-import argparse, asyncio, bs4, colorama, datetime, jsbeautifier, os, random, re, scrapy, scrapy.crawler, scrapy.utils.project, sys, termcolor, tldextract, urllib.parse
+import argparse, asyncio, colorama, datetime, jsbeautifier, os, random, re, scrapy, scrapy.crawler, scrapy.utils.project, sys, termcolor, tldextract, urllib.parse
+
+from bs4 import BeautifulSoup
 
 colorama.init(autoreset = True)
 
@@ -82,7 +84,7 @@ def get_cookie_key_value(cookie):
 		key, value = cookie.split("=", 1)
 	return key.strip(), value.strip()
 
-DEFAULT_USER_AGENT = "Scrapy Scraper/2.3"
+DEFAULT_USER_AGENT = "Scrapy Scraper/2.4"
 
 def get_all_user_agents():
 	array = []
@@ -261,7 +263,7 @@ class ScrapyScraperSpider(scrapy.Spider):
 			file = os.path.join(self.__directory, file)
 			if not os.path.exists(file):
 				try:
-					soup = bs4.BeautifulSoup(body, "html.parser")
+					soup = BeautifulSoup(body, "html.parser")
 					open(file, "w").write(jsbeautifier.beautify(soup.get_text()))
 				except Exception as ex:
 					self.__print_ex(ex)
@@ -368,7 +370,7 @@ class ScrapyScraper:
 class MyArgParser(argparse.ArgumentParser):
 
 	def print_help(self):
-		print("Scrapy Scraper v2.3 ( github.com/ivan-sincek/scrapy-scraper )")
+		print("Scrapy Scraper v2.4 ( github.com/ivan-sincek/scrapy-scraper )")
 		print("")
 		print("Usage:   scrapy-scraper -u urls                     -o out         [-dir directory]")
 		print("Example: scrapy-scraper -u https://example.com/home -o results.txt [-dir downloads]")
@@ -694,7 +696,7 @@ def main():
 	if validate.run():
 		print("###########################################################################")
 		print("#                                                                         #")
-		print("#                           Scrapy Scraper v2.3                           #")
+		print("#                           Scrapy Scraper v2.4                           #")
 		print("#                                     by Ivan Sincek                      #")
 		print("#                                                                         #")
 		print("# Crawl and scrape websites.                                              #")
