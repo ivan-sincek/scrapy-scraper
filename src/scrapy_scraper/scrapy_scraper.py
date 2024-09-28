@@ -239,7 +239,7 @@ class ScrapyScraperSpider(scrapy.Spider):
 		if self.__directory:
 			self.__download_js(url, body)
 		# --------------------------------
-		links = self.__extract_links(url, body)
+		links = self.__extract_links(url, scrapy.http.HtmlResponse(url = url, body = body, encoding = "UTF-8") if self.__playwright else response)
 		if self.__links:
 			self.__collected.extend(links)
 			for link in links:
@@ -266,25 +266,25 @@ class ScrapyScraperSpider(scrapy.Spider):
 					soup = BeautifulSoup(body, "html.parser")
 					open(file, "w").write(jsbeautifier.beautify(soup.get_text()))
 				except Exception as ex:
-					self.__print_ex(ex)
+					self.__print_ex(url, ex)
 
-	def __extract_links(self, url, body):
+	def __extract_links(self, url, response):
 		tmp = []
 		try:
 			for link in unique(scrapy.linkextractors.LinkExtractor(
 				tags  = ["a", "link", "script"],
 				attrs = ["href", "src"]
-			).extract_links(scrapy.http.HtmlResponse(url = url, body = body, encoding = "UTF-8") if self.__playwright else body)):
+			).extract_links(response)):
 				link = urllib.parse.urljoin(url, link.url)
 				if urllib.parse.urlsplit(link).scheme.lower() in ["http", "https"]:
 					tmp.append(link)
-		except UnicodeEncodeError as ex:
-			self.__print_ex(ex)
+		except (UnicodeEncodeError, AttributeError) as ex:
+			self.__print_ex(url, ex)
 		return unique(tmp)
 
-	def __print_ex(self, ex):
+	def __print_ex(self, url, error):
 		if self.__debug:
-			termcolor.cprint(ex, "red")
+			termcolor.cprint(f"[ EXCEPTION ] {url} -> {error}", "red")
 
 # ----------------------------------------
 class ScrapyScraper:
