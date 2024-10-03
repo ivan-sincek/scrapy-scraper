@@ -84,7 +84,7 @@ def get_cookie_key_value(cookie):
 		key, value = cookie.split("=", 1)
 	return key.strip(), value.strip()
 
-DEFAULT_USER_AGENT = "Scrapy Scraper/2.4"
+DEFAULT_USER_AGENT = "Scrapy Scraper/2.5"
 
 def get_all_user_agents():
 	array = []
@@ -227,11 +227,11 @@ class ScrapyScraperSpider(scrapy.Spider):
 			page = response.request.meta["playwright_page"]
 			if self.__playwright_wait > 0:
 				await asyncio.sleep(self.__playwright_wait)
-			body = await page.content() # text, from Playwright
+			body = await page.content() # text
 			await page.close()
 			await page.context.close()
 		else:
-			body = response.body # raw, from Scrapy
+			body = response.body # raw
 		self.__crawled.append(url)
 		self.__collected.append(url)
 		self.__print_success(status, url)
@@ -370,7 +370,7 @@ class ScrapyScraper:
 class MyArgParser(argparse.ArgumentParser):
 
 	def print_help(self):
-		print("Scrapy Scraper v2.4 ( github.com/ivan-sincek/scrapy-scraper )")
+		print("Scrapy Scraper v2.5 ( github.com/ivan-sincek/scrapy-scraper )")
 		print("")
 		print("Usage:   scrapy-scraper -u urls                     -o out         [-dir directory]")
 		print("Example: scrapy-scraper -u https://example.com/home -o results.txt [-dir downloads]")
@@ -696,7 +696,7 @@ def main():
 	if validate.run():
 		print("###########################################################################")
 		print("#                                                                         #")
-		print("#                           Scrapy Scraper v2.4                           #")
+		print("#                           Scrapy Scraper v2.5                           #")
 		print("#                                     by Ivan Sincek                      #")
 		print("#                                                                         #")
 		print("# Crawl and scrape websites.                                              #")

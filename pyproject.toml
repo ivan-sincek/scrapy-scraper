@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scrapy-scraper"
-version = "2.4"
+version = "2.5"
 authors = [{ name = "Ivan Sincek" }]
 description = "Web crawler and scraper based on Scrapy and Playwright's headless browser."
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 classifiers = [
 	"Programming Language :: Python :: 3",
 	"License :: OSI Approved :: MIT License",
