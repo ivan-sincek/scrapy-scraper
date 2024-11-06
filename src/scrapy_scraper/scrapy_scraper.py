@@ -287,6 +287,7 @@ class ScrapyScraperSpider(scrapy.Spider):
 			termcolor.cprint(f"[ EXCEPTION ] {url} -> {error}", "red")
 
 # ----------------------------------------
+
 class ScrapyScraper:
 
 	def __init__(self, urls, whitelist, links, playwright, playwright_wait, concurrent_requests, concurrent_requests_domain, sleep, random_sleep, auto_throttle, retries, recursion, request_timeout, headers, cookies, user_agents, proxy, directory, out, debug):
