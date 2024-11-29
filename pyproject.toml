@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=75.3.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scrapy-scraper"
+version = "3.5"
+authors = [{ name = "Ivan Sincek" }]
+description = "Web crawler and scraper based on Scrapy and Playwright's headless browser."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+	"Programming Language :: Python :: 3",
+	"License :: OSI Approved :: MIT License",
+	"Operating System :: OS Independent"
+]
+dependencies = [
+	"beautifulsoup4>=4.12.3",
+	"bot-safe-agents>=1.0",
+	"colorama>=0.4.6",
+	"jsbeautifier>=1.14.11",
+	"playwright>=1.49.0",
+	"scrapy>=2.12.0",
+	"scrapy-playwright>=0.0.42",
+	"termcolor>=2.4.0",
+	"tldextract>=3.6.0"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ivan-sincek/scrapy-scraper"
+
+[project.scripts]
+scrapy-scraper = "scrapy_scraper.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
