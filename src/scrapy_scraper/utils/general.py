@@ -17,7 +17,7 @@ def to_float(value: str):
 
 # ----------------------------------------
 
-def get_timestamp(message):
+def get_timestamp(message: str):
 	"""
 	Get the current timestamp.
 	"""
