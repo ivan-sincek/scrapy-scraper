@@ -71,7 +71,7 @@ class MyArgParser(argparse.ArgumentParser):
 		print("USER AGENT")
 		print("    User agent to use")
 		print(f"    Default: {config.USER_AGENT}")
-		print("    -a, --user-agent = random(-all) | curl/3.30.1 | etc.")
+		print("    -a, --user-agent = random[-all] | curl/3.30.1 | etc.")
 		print("PROXY")
 		print("    Web proxy to use")
 		print("    -x, --proxy = http://127.0.0.1:8080 | etc.")

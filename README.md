@@ -149,7 +149,7 @@ COOKIE
 USER AGENT
     User agent to use
     Default: Scrapy Scraper/3.5
-    -a, --user-agent = random(-all) | curl/3.30.1 | etc.
+    -a, --user-agent = random[-all] | curl/3.30.1 | etc.
 PROXY
     Web proxy to use
     -x, --proxy = http://127.0.0.1:8080 | etc.
