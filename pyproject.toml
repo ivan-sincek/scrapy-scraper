@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scrapy-scraper"
-version = "3.5"
+version = "3.6"
 authors = [{ name = "Ivan Sincek" }]
 description = "Web crawler and scraper based on Scrapy and Playwright's headless browser."
 readme = "README.md"
