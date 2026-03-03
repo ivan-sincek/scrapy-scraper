@@ -279,11 +279,7 @@ class ScrapyScraperSpider(scrapy.Spider):
 		domain   = obj.netloc.lower()
 		port     = str(obj.port) if obj.port else ""
 		path     = obj.path.strip("/").replace("/", ".")
-		filename = ""
-		for part in [scheme, domain, port, path]:
-			if part:
-				filename = f"{filename}_{part}"
-		return filename
+		return (".").join(part for part in [scheme, domain, port, path] if part)
 
 	# ------------------------------------
 
