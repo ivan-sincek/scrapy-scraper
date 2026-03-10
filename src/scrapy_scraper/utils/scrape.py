@@ -11,10 +11,13 @@ from playwright.async_api               import Request as PlaywrightRequest, Pag
 
 import asyncio, dataclasses, jsbeautifier, os, random, scrapy, scrapy.crawler, scrapy.utils.project, typing, urllib.parse
 
+STATUS_ERROR = -1
+NO_RECURSION = -1
+
 @dataclasses.dataclass
 class Crawled:
 	url         : str  = ""
-	status      : int  = -1
+	status      : int  = STATUS_ERROR
 	is_start_url: bool = False
 
 @dataclasses.dataclass
@@ -53,7 +56,7 @@ class ScrapyScraperSpider(scrapy.Spider):
 		self.allowed_domains   = whitelist
 		self.__playwright      = playwright
 		self.__playwright_wait = playwright_wait
-		self.__crawl           = recursion > -1
+		self.__crawl           = recursion > NO_RECURSION
 		self.__headers         = headers
 		self.__cookies         = cookies
 		self.__user_agents     = user_agents
@@ -106,7 +109,7 @@ class ScrapyScraperSpider(scrapy.Spider):
 
 	def __get_headers(self) -> dict[str, str]:
 		"""
-		Get default HTTP request headers.
+		Get HTTP request headers.
 		"""
 		default_headers = {
 			"User-Agent"               : self.__get_user_agent(),
@@ -151,8 +154,8 @@ class ScrapyScraperSpider(scrapy.Spider):
 		tmp["proxy"                      ] = self.__proxy
 		tmp["cookiejar"                  ] = 1
 		tmp["dont_merge_cookies"         ] = False
-		tmp["is_start_url"               ] = is_start_url
-		tmp["take_screenshot"            ] = take_screenshot
+		tmp["is_start_url"               ] = is_start_url    # custom attribute
+		tmp["take_screenshot"            ] = take_screenshot # custom attribute
 		return tmp
 
 	# ------------------------------------
@@ -179,7 +182,7 @@ class ScrapyScraperSpider(scrapy.Spider):
 		"""
 		request : Request      = failure.request
 		response: HtmlResponse = failure.value.response
-		status = response.status if failure.check(HttpError) else -1
+		status = response.status if failure.check(HttpError) else STATUS_ERROR
 		url    = request.url
 		error  = str(failure.value).splitlines()[0]
 		if self.__playwright:
@@ -193,7 +196,7 @@ class ScrapyScraperSpider(scrapy.Spider):
 		Print error.
 		"""
 		if self.__debug:
-			if status > -1:
+			if status > STATUS_ERROR:
 				url = f"{status} {url}"
 			general.print_red(f"[ ERROR ] {url} -> {message}")
 
@@ -426,7 +429,7 @@ class ScrapyScraper:
 		settings["RETRY_TIMES"                   ] = self.__retries
 		settings["REDIRECT_ENABLED"              ] = self.__max_redirects > 0
 		settings["REDIRECT_MAX_TIMES"            ] = self.__max_redirects
-		settings["DEPTH_LIMIT"                   ] = self.__recursion if self.__recursion > -1 else 1
+		settings["DEPTH_LIMIT"                   ] = self.__recursion if self.__recursion > NO_RECURSION else 1
 		# --------------------------------
 		settings["ROBOTSTXT_OBEY"                      ] = False
 		settings["TELNETCONSOLE_ENABLED"               ] = False
